@@ -1,0 +1,1 @@
+yesya-coin
