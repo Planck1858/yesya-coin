@@ -3,6 +3,7 @@ package models
 import (
 	"crypto/sha256"
 	"fmt"
+	"reflect"
 	"strconv"
 	"time"
 )
@@ -64,7 +65,7 @@ func (b Blockchain) getLatestBlock() Block {
 
 func isValidNewBlock(newBlock Block, previousBlock Block) bool {
 	// TODO: check new hash validity
-	if previousBlock.index +1 != newBlock.index {
+	if previousBlock.index+1 != newBlock.index {
 		fmt.Println("Invalid index !")
 		return false
 	} else if previousBlock.hash != newBlock.previousHash {
@@ -74,4 +75,24 @@ func isValidNewBlock(newBlock Block, previousBlock Block) bool {
 	return true
 }
 
+func isValidBlockStructure(block Block) bool {
+	if reflect.TypeOf(block.index).String() == "int" &&
+		reflect.TypeOf(block.hash).String() == "string" &&
+		reflect.TypeOf(block.previousHash).String() == "string" &&
+		reflect.TypeOf(block.timestamp).String() == "time.Time" &&
+		reflect.TypeOf(block.data).String() == "string" {
+		return true
+	}
+	fmt.Println("Invalid Block Structure !")
+	return false
+}
 
+func isValidChain(bc Blockchain) bool {
+	for i := 1; i < len(bc); i++ {
+		if !isValidNewBlock(bc[i], bc[i - 1]) {
+			fmt.Println("Invalid Chain !")
+			return false
+		}
+	}
+	return true
+}
