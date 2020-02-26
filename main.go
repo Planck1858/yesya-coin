@@ -1,9 +1,15 @@
 package main
 
 import (
-	"github.com/Planck1858/yesya-coin/models"
+	"github.com/Planck1858/yesya-coin/router"
+	"log"
 )
 
 func main() {
-	bc := models.NewBlockchain()
+	r := router.New()
+
+	err := r.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
