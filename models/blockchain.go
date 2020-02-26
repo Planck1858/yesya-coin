@@ -2,17 +2,19 @@ package models
 
 import (
 	"crypto/sha256"
-	"fmt"
+	"encoding/hex"
+	"log"
+	"reflect"
 	"strconv"
 	"time"
 )
 
 type Block struct {
-	index        int       `json:"index"`
-	hash         string    `json:"hash"`
-	previousHash string    `json:"previous_hash"`
-	timestamp    time.Time `json:"timestamp"`
-	data         string    `json:"data"`
+	Index        int       `json:"index" db:"index"`
+	Timestamp    time.Time `json:"timestamp" db:"timestamp"`
+	Data         string    `json:"data" db:"data"`
+	Hash         string    `json:"hash" db:"hash"`
+	PreviousHash string    `json:"previousHash" db:"previous_hash"`
 }
 
 type Blockchain struct {
@@ -22,18 +24,18 @@ type Blockchain struct {
 func NewBlockchain() *Blockchain {
 	var bc Blockchain
 	genesisBlock := Block{
-		index:        0,
-		hash:         "a948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447",
-		previousHash: "",
-		timestamp:    time.Date(2020, 2, 17, 12, 12, 0, 0, time.UTC),
-		data:         "My genesisBlock",
+		Index:        0,
+		Timestamp:    time.Date(2020, 2, 17, 00, 00, 0, 0, time.UTC),
+		Data:         "My genesisBlock",
+		Hash:         "a948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447",
+		PreviousHash: "",
 	}
 	bc.Blocks = append(bc.Blocks, genesisBlock)
 
 	return &bc
 }
 
-func (bc *Blockchain) GetBlockchain() []Block {
+func (bc *Blockchain) GetBlocks() []Block {
 	return bc.Blocks
 }
 
@@ -42,62 +44,66 @@ func (bc *Blockchain) NewBlock(data string) {
 }
 
 func (bc *Blockchain) generateNextBlock(blockData string) {
-	previousBlock := bc.getLatestBlock()
-	nextIndex := previousBlock.index + 1
+	previousBlock := bc.GetLatestBlock()
+	nextIndex := previousBlock.Index + 1
 	nextTimestamp := time.Now()
-	nextHash := calculateHash(nextIndex, previousBlock.hash, nextTimestamp, blockData)
-	var newBlock = Block{nextIndex, nextHash, previousBlock.hash, nextTimestamp, blockData}
+	nextHash := calculateHash(nextIndex, previousBlock.Hash, nextTimestamp, blockData)
+	var newBlock = Block{nextIndex, nextTimestamp, blockData,
+		nextHash, previousBlock.Hash}
 
-	bc.Blocks = append(bc.Blocks, newBlock)
+	if isValidChain(*bc) && isValidBlockStructure(newBlock) {
+		bc.Blocks = append(bc.Blocks, newBlock)
+	} else {
+		log.Printf("Error - invalid new block")
+	}
 }
 
 func calculateHash(index int, previousHash string, timestamp time.Time, data string) string {
 	sum := sha256.Sum256([]byte(strconv.Itoa(index) + previousHash + timestamp.String() + data))
+
 	return convByteToStr(sum)
 }
 
 func convByteToStr(bs [32]byte) string {
-	b := make([]byte, len(bs))
-	for i, v := range bs {
-		b[i] = byte(v)
-	}
-	return string(b)
+	return hex.EncodeToString(bs[:])
 }
 
-func (bc *Blockchain) getLatestBlock() Block {
+func (bc *Blockchain) GetLatestBlock() Block {
 	return bc.Blocks[len(bc.Blocks)-1]
 }
 
 func isValidNewBlock(newBlock Block, previousBlock Block) bool {
-	// TODO: check new hash validity
-	if previousBlock.index+1 != newBlock.index {
-		fmt.Println("Invalid index !")
+	// TODO: check new Hash validity
+	if previousBlock.Index+1 != newBlock.Index {
+		log.Println("Error - Invalid Index !")
 		return false
-	} else if previousBlock.hash != newBlock.previousHash {
-		fmt.Println("Invalid previoushash !")
+	} else if previousBlock.Hash != newBlock.PreviousHash {
+		log.Println("Error - Invalid previoushash !")
 		return false
 	}
+
 	return true
 }
 
-//func isValidBlockStructure(block Block) bool {
-//	if reflect.TypeOf(block.index).String() == "int" &&
-//		reflect.TypeOf(block.hash).String() == "string" &&
-//		reflect.TypeOf(block.previousHash).String() == "string" &&
-//		reflect.TypeOf(block.timestamp).String() == "time.Time" &&
-//		reflect.TypeOf(block.data).String() == "string" {
-//		return true
-//	}
-//	fmt.Println("Invalid Block Structure !")
-//	return false
-//}
-//
-//func isValidChain(bc Blockchain) bool {
-//	for i := 1; i < len(bc.Blocks); i++ {
-//		if !isValidNewBlock(bc.Blocks[i], bc.Blocks[i-1]) {
-//			fmt.Println("Invalid Chain !")
-//			return false
-//		}
-//	}
-//	return true
-//}
+func isValidBlockStructure(block Block) bool {
+	if reflect.TypeOf(block.Index).String() == "int" &&
+		reflect.TypeOf(block.Hash).String() == "string" &&
+		reflect.TypeOf(block.PreviousHash).String() == "string" &&
+		reflect.TypeOf(block.Timestamp).String() == "time.Time" &&
+		reflect.TypeOf(block.Data).String() == "string" {
+		return true
+	}
+
+	log.Println("Error - Invalid Block Structure !")
+	return false
+}
+
+func isValidChain(bc Blockchain) bool {
+	for i := 1; i < len(bc.Blocks); i++ {
+		if !isValidNewBlock(bc.Blocks[i], bc.Blocks[i-1]) {
+			log.Println("Error - Invalid Chain !")
+			return false
+		}
+	}
+	return true
+}

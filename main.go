@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/Planck1858/yesya-coin/router"
+	"log"
 )
 
 func main() {
@@ -9,12 +10,6 @@ func main() {
 
 	err := r.Run()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-
-	//bc := models.NewBlockchain()
-	//spew.Dump(bc)
-	//bc.NewBlock("my new second block")
-	//bc.NewBlock("my new third block")
-	//spew.Dump(bc)
 }
